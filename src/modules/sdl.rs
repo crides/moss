@@ -1,8 +1,7 @@
-
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
-use std::os::raw::{c_int, c_uint, c_char, c_void};
+use std::os::raw::{c_char, c_int, c_uint, c_void};
 
 pub type Uint8 = u8;
 pub type Uint32 = u32;
@@ -11,12 +10,12 @@ pub type Uint16 = i16;
 pub type SDL_Keycode = Sint32;
 
 #[repr(u32)]
-#[derive(Copy,Clone)]
-pub enum SDL_BlendMode{
+#[derive(Copy, Clone)]
+pub enum SDL_BlendMode {
     NONE = 0x00000000,
     BLEND = 0x00000001,
     ADD = 0x00000002,
-    MOD = 0x00000004
+    MOD = 0x00000004,
 }
 
 #[repr(u32)]
@@ -265,11 +264,11 @@ pub enum SDL_Scancode {
     APP2 = 284,
     AUDIOREWIND = 285,
     AUDIOFASTFORWARD = 286,
-    SDL_NUM_SCANCODES = 512
+    SDL_NUM_SCANCODES = 512,
 }
 
 #[repr(C)]
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct SDL_Keysym {
     pub scancode: SDL_Scancode,
     pub sym: SDL_Keycode,
@@ -278,7 +277,7 @@ pub struct SDL_Keysym {
 }
 
 #[repr(C)]
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct SDL_KeyboardEvent {
     pub ty: Uint32,
     pub timestamp: Uint32,
@@ -287,19 +286,19 @@ pub struct SDL_KeyboardEvent {
     pub repeat: Uint8,
     pub padding2: Uint8,
     pub padding3: Uint8,
-    pub keysym: SDL_Keysym
+    pub keysym: SDL_Keysym,
 }
 
 #[repr(C)]
 pub union SDL_Event {
     pub event_type: Uint32,
     pub key: SDL_KeyboardEvent,
-    padding: [u8;56],
-    paranoid_padding: [u8;128]
+    padding: [u8; 56],
+    paranoid_padding: [u8; 128],
 }
 
 pub const SDL_WINDOWPOS_CENTERED_MASK: c_uint = 0x2FFF0000;
-pub const SDL_WINDOWPOS_CENTERED: c_uint = SDL_WINDOWPOS_CENTERED_MASK|0;
+pub const SDL_WINDOWPOS_CENTERED: c_uint = SDL_WINDOWPOS_CENTERED_MASK;
 pub const SDL_WINDOW_SHOWN: c_uint = 0x00000004;
 
 pub const SDL_RENDERER_SOFTWARE: c_uint = 0x00000001;
@@ -314,23 +313,25 @@ pub const SDL_TEXTUREACCESS_TARGET: c_int = 2;
 
 #[repr(C)]
 pub struct SDL_Window {
-    _mem: [u8; 0]
+    _mem: [u8; 0],
 }
 
 #[repr(C)]
 pub struct SDL_Renderer {
-    _mem: [u8; 0]
+    _mem: [u8; 0],
 }
 
 #[repr(C)]
 pub struct SDL_Texture {
-    _mem: [u8; 0]
+    _mem: [u8; 0],
 }
 
 #[repr(C)]
 pub struct SDL_Rect {
-    pub x: c_int, pub y: c_int,
-    pub w: c_int, pub h: c_int
+    pub x: c_int,
+    pub y: c_int,
+    pub w: c_int,
+    pub h: c_int,
 }
 
 #[link(name = "SDL2")]
@@ -338,52 +339,56 @@ extern "C" {
     // SDL_video.h
     pub fn SDL_CreateWindow(
         title: *const c_char,
-        x: c_int, y: c_int, w: c_int, h: c_int,
-        flags: Uint32
+        x: c_int,
+        y: c_int,
+        w: c_int,
+        h: c_int,
+        flags: Uint32,
     ) -> *mut SDL_Window;
 
     // SDL_render.h
     pub fn SDL_CreateRenderer(
         window: *mut SDL_Window,
         index: c_int,
-        flags: Uint32
+        flags: Uint32,
     ) -> *mut SDL_Renderer;
 
-    pub fn SDL_SetRenderDrawColor(rdr: *mut SDL_Renderer,
-        r: Uint8, g: Uint8, b: Uint8, a: Uint8
-    );
+    pub fn SDL_SetRenderDrawColor(rdr: *mut SDL_Renderer, r: Uint8, g: Uint8, b: Uint8, a: Uint8);
     pub fn SDL_RenderClear(rdr: *mut SDL_Renderer) -> c_int;
     pub fn SDL_RenderPresent(rdr: *mut SDL_Renderer);
     pub fn SDL_RenderDrawPoint(rdr: *mut SDL_Renderer, x: c_int, y: c_int) -> c_int;
     pub fn SDL_RenderFillRect(rdr: *mut SDL_Renderer, rect: *const SDL_Rect) -> c_int;
 
     pub fn SDL_Delay(ms: Uint32);
-    
+
     pub fn SDL_PollEvent(event: *mut SDL_Event) -> c_int;
-    
+
     pub fn SDL_Quit();
     pub fn SDL_DestroyWindow(window: *mut SDL_Window);
-    pub fn SDL_SetRenderDrawBlendMode(
-        rdr: *mut SDL_Renderer, blend_mode: SDL_BlendMode
+    pub fn SDL_SetRenderDrawBlendMode(rdr: *mut SDL_Renderer, blend_mode: SDL_BlendMode) -> c_int;
+
+    pub fn SDL_RenderReadPixels(
+        rdr: *mut SDL_Renderer,
+        rect: *const SDL_Rect,
+        format: Uint32,
+        pixels: *mut c_void,
+        picth: c_int,
     ) -> c_int;
 
-    pub fn SDL_RenderReadPixels(rdr: *mut SDL_Renderer,
-        rect: *const SDL_Rect, format: Uint32,
-        pixels: *mut c_void, picth: c_int
-    ) -> c_int;
-
-    pub fn  SDL_CreateTexture(rdr: *mut SDL_Renderer,
-        format: Uint32, access: c_int, w: c_int, h: c_int
+    pub fn SDL_CreateTexture(
+        rdr: *mut SDL_Renderer,
+        format: Uint32,
+        access: c_int,
+        w: c_int,
+        h: c_int,
     ) -> *mut SDL_Texture;
-    
-    pub fn SDL_SetRenderTarget(rdr: *mut SDL_Renderer,
-        texture: *mut SDL_Texture
-    ) -> c_int;
 
-    pub fn SDL_RenderCopy(rdr: *mut SDL_Renderer,
+    pub fn SDL_SetRenderTarget(rdr: *mut SDL_Renderer, texture: *mut SDL_Texture) -> c_int;
+
+    pub fn SDL_RenderCopy(
+        rdr: *mut SDL_Renderer,
         texture: *mut SDL_Texture,
         srcrect: *const SDL_Rect,
-        dstrect: *const SDL_Rect
+        dstrect: *const SDL_Rect,
     ) -> c_int;
 }
-

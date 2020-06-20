@@ -1,26 +1,27 @@
-
-use std::str;
 use std::env::var;
 use std::io;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str;
 
-use object::{Object,List};
+use object::{List, Object};
 
-pub struct History{}
+pub struct History {}
 
 impl History {
-    pub fn new() -> Self {Self{}}
-    pub fn append(&mut self, _s: &str){}
+    pub fn new() -> Self {
+        Self {}
+    }
+    pub fn append(&mut self, _s: &str) {}
 }
 
 pub fn getline(prompt: &str) -> io::Result<String> {
-    print!("{}",prompt);
+    print!("{}", prompt);
     io::stdout().flush().ok();
     let mut input = String::new();
     return match io::stdin().read_line(&mut input) {
         Ok(_) => Ok(input),
-        Err(x) => Err(x)
+        Err(x) => Err(x),
     };
 }
 
@@ -39,12 +40,14 @@ pub fn init_search_paths() -> List {
             path.push("prog/moss/");
             match path.as_path().to_str() {
                 Some(s) => a.push(Object::from(s)),
-                None => unreachable!()
+                None => unreachable!(),
             }
         }
         Err(_) => {}
     };
     a.push(Object::from(FALLBACK_PATH));
-    return List{v: a, frozen: false};
+    return List {
+        v: a,
+        frozen: false,
+    };
 }
-

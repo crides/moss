@@ -1,4 +1,3 @@
-
 pub const STACK_SIZE: usize = 4000;
 pub const FRAME_STACK_SIZE: usize = 200;
 
@@ -11,8 +10,8 @@ mod system;
 pub mod object;
 
 mod compiler;
-mod vm;
 mod global;
+mod vm;
 
 #[path = "objects/list.rs"]
 mod list;
@@ -103,18 +102,18 @@ mod sdl;
 #[path = "modules/graphics.rs"]
 mod graphics;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 // use std::fs::File;
 // use std::io::Read;
-use object::{Object, List, Map, CharString, TypeName, Downcast};
-use vm::{RTE,State,EnvPart,Env};
-pub use vm::{get_env};
-pub use compiler::{Value, CompilerExtra};
+pub use compiler::{CompilerExtra, Value};
 use global::init_rte;
+use object::{CharString, Downcast, List, Map, Object, TypeName};
+pub use vm::get_env;
+use vm::{Env, EnvPart, State, RTE};
 
 pub struct InterpreterLock<'a> {
-    state: std::cell::RefMut<'a,State>
+    state: std::cell::RefMut<'a, State>,
 }
 
 impl<'a> InterpreterLock<'a> {
@@ -123,27 +122,30 @@ impl<'a> InterpreterLock<'a> {
     }
 }
 
-pub struct Interpreter{
+pub struct Interpreter {
     pub rte: Rc<RTE>,
-    pub state: RefCell<State>
+    pub state: RefCell<State>,
 }
 
-impl Interpreter{
+impl Interpreter {
     pub fn lock(&self) -> InterpreterLock {
-        InterpreterLock{state: self.state.borrow_mut()}
+        InterpreterLock {
+            state: self.state.borrow_mut(),
+        }
     }
-    pub fn tie<T>(&self, f: impl FnOnce(&mut Env)->T) -> T {
+    pub fn tie<T>(&self, f: impl FnOnce(&mut Env) -> T) -> T {
         f(&mut self.lock().env())
     }
     pub fn eval(&self, s: &str) -> Object {
         self.lock().env().eval(s)
     }
     pub fn eval_cast<T>(&self, s: &str) -> T
-    where T: TypeName+Downcast<Output=T>
+    where
+        T: TypeName + Downcast<Output = T>,
     {
         self.tie(|env| {
-           let y = env.eval(s);
-           env.downcast::<T>(&y)
+            let y = env.eval(s);
+            env.downcast::<T>(&y)
         })
     }
 
@@ -156,12 +158,13 @@ impl Interpreter{
             stack.push(Object::Null);
         }
 
-        let state = RefCell::new(State{
-            stack: stack, sp: 0,
-            env: EnvPart::new(FRAME_STACK_SIZE, rte.clone())
+        let state = RefCell::new(State {
+            stack,
+            sp: 0,
+            env: EnvPart::new(FRAME_STACK_SIZE, rte.clone()),
         });
 
-        return Self{rte, state};
+        return Self { rte, state };
     }
 
     pub fn new() -> Rc<Self> {
@@ -172,9 +175,9 @@ impl Interpreter{
         let mut ilock = self.lock();
         let mut env = ilock.env();
         match x.repr(&mut env) {
-            Ok(s)=>s,
-            Err(e)=>{
-                println!("{}",env.exception_to_string(&e));
+            Ok(s) => s,
+            Err(e) => {
+                println!("{}", env.exception_to_string(&e));
                 "[exception in Interpreter::repr, see stdout]".to_string()
             }
         }
@@ -186,7 +189,7 @@ impl Interpreter{
         match x.string(&mut self.lock().env()) {
             Ok(s) => return s,
             Err(e) => {
-                println!("{}",env.exception_to_string(&e));
+                println!("{}", env.exception_to_string(&e));
                 panic!();
             }
         }
@@ -196,7 +199,7 @@ impl Interpreter{
         let mut conf = self.rte.compiler_config.borrow_mut();
         *conf = Some(Box::new(config));
     }
-    
+
     pub fn set_capabilities(&self, root_mode: bool) {
         if root_mode {
             let mut capabilities = self.rte.capabilities.borrow_mut();
@@ -211,13 +214,13 @@ pub fn new_list_str(a: &[String]) -> Rc<RefCell<List>> {
     for x in a {
         v.push(CharString::new_object_str(x));
     }
-    return Rc::new(RefCell::new(List{v: v, frozen: false}));
+    return Rc::new(RefCell::new(List { v, frozen: false }));
 }
 
 fn clear_map(buffer: &mut Vec<Object>, map: &Rc<RefCell<Map>>) {
     {
         let m = &mut map.borrow_mut().m;
-        for (_k,v) in m.drain() {
+        for (_k, v) in m.drain() {
             buffer.push(v);
         }
     }
@@ -232,19 +235,19 @@ impl Drop for Interpreter {
         let mut buffer: Vec<Object> = Vec::with_capacity(32);
         for gtab in &v[..] {
             // println!("clear {}",Object::Map(gtab.clone()));
-            clear_map(&mut buffer,gtab);
+            clear_map(&mut buffer, gtab);
         }
-        clear_map(&mut buffer,&self.rte.type_bool.map);
-        clear_map(&mut buffer,&self.rte.type_int.map);
-        clear_map(&mut buffer,&self.rte.type_long.map);
-        clear_map(&mut buffer,&self.rte.type_float.map);
-        clear_map(&mut buffer,&self.rte.type_complex.map);
-        clear_map(&mut buffer,&self.rte.type_string.map);
-        clear_map(&mut buffer,&self.rte.type_list.map);
-        clear_map(&mut buffer,&self.rte.type_map.map);
-        clear_map(&mut buffer,&self.rte.type_range.map);
-        clear_map(&mut buffer,&self.rte.type_function.map);
-        clear_map(&mut buffer,&self.rte.type_iterable.map);
+        clear_map(&mut buffer, &self.rte.type_bool.map);
+        clear_map(&mut buffer, &self.rte.type_int.map);
+        clear_map(&mut buffer, &self.rte.type_long.map);
+        clear_map(&mut buffer, &self.rte.type_float.map);
+        clear_map(&mut buffer, &self.rte.type_complex.map);
+        clear_map(&mut buffer, &self.rte.type_string.map);
+        clear_map(&mut buffer, &self.rte.type_list.map);
+        clear_map(&mut buffer, &self.rte.type_map.map);
+        clear_map(&mut buffer, &self.rte.type_range.map);
+        clear_map(&mut buffer, &self.rte.type_function.map);
+        clear_map(&mut buffer, &self.rte.type_iterable.map);
 
         let mut state = self.rte.secondary_state.borrow_mut();
         *state = None;
@@ -254,7 +257,7 @@ impl Drop for Interpreter {
 fn is_file(id: &str) -> bool {
     let metadata = match std::fs::metadata(id) {
         Ok(value) => value,
-        Err(_) => return false
+        Err(_) => return false,
     };
     return metadata.file_type().is_file();
 }
@@ -262,7 +265,7 @@ fn is_file(id: &str) -> bool {
 pub fn residual_path(id: &str) -> Option<String> {
     if is_file(id) {
         return None;
-    }else{
+    } else {
         let mut path = system::library_path();
         path.push_str("include/");
         path.push_str(id);

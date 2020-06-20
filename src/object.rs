@@ -1,16 +1,15 @@
-
-use std::rc::Rc;
-use std::cell::{Cell,RefCell};
+use std::any::Any;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::fmt;
-use std::any::Any;
 use std::mem::replace;
+use std::rc::Rc;
 
+pub use crate::class::Table;
 use crate::complex::Complex64;
 use crate::vm;
-use crate::vm::{Module,RTE};
 pub use crate::vm::Env;
-pub use crate::class::Table;
+use crate::vm::{Module, RTE};
 
 pub enum Object {
     Null,
@@ -24,16 +23,16 @@ pub enum Object {
     String(Rc<CharString>),
     Map(Rc<RefCell<Map>>),
     Function(Rc<Function>),
-    Interface(Rc<dyn Interface>)
+    Interface(Rc<dyn Interface>),
 }
 
-impl Object{
-    pub fn string(&self, env: &mut Env) -> Result<String,Box<Exception>> {
-        vm::object_to_string(env,self)
+impl Object {
+    pub fn string(&self, env: &mut Env) -> Result<String, Box<Exception>> {
+        vm::object_to_string(env, self)
     }
 
-    pub fn repr(&self, env: &mut Env) -> Result<String,Box<Exception>> {
-        vm::object_to_repr(env,self)
+    pub fn repr(&self, env: &mut Env) -> Result<String, Box<Exception>> {
+        vm::object_to_repr(env, self)
     }
 
     pub fn to_repr(&self) -> String {
@@ -42,32 +41,32 @@ impl Object{
 
     #[inline(always)]
     pub fn take(&mut self) -> Object {
-        replace(self,Object::Null)
+        replace(self, Object::Null)
     }
 
     pub fn table(t: Rc<Table>) -> Object {
         Object::Interface(t)
     }
-    
+
     pub fn empty() -> Object {
         Object::Info(Info::Empty)
     }
-    
+
     pub fn unimplemented() -> Object {
         Object::Info(Info::Unimplemented)
     }
-    
+
     pub fn is_empty(&self) -> bool {
         match self {
             Object::Info(Info::Empty) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_unimplemented(&self) -> bool {
         match self {
             Object::Info(Info::Unimplemented) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -81,52 +80,55 @@ impl fmt::Display for Object {
 impl Clone for Object {
     fn clone(&self) -> Object {
         match *self {
-            Object::Null => {Object::Null},
-            Object::Bool(x) => {Object::Bool(x)},
-            Object::Int(x) => {Object::Int(x)},
-            Object::Float(x) => {Object::Float(x)},
-            Object::Complex(x) => {Object::Complex(x)},
-            Object::Info(x) => {Object::Info(x)},
-            Object::String(ref x) => {Object::String(x.clone())},
-            Object::List(ref x) => {Object::List(x.clone())},
-            Object::Map(ref x) => {Object::Map(x.clone())},
-            Object::Function(ref x) => {Object::Function(x.clone())},
-            Object::Interface(ref x) => {Object::Interface(x.clone())}
+            Object::Null => Object::Null,
+            Object::Bool(x) => Object::Bool(x),
+            Object::Int(x) => Object::Int(x),
+            Object::Float(x) => Object::Float(x),
+            Object::Complex(x) => Object::Complex(x),
+            Object::Info(x) => Object::Info(x),
+            Object::String(ref x) => Object::String(x.clone()),
+            Object::List(ref x) => Object::List(x.clone()),
+            Object::Map(ref x) => Object::Map(x.clone()),
+            Object::Function(ref x) => Object::Function(x.clone()),
+            Object::Interface(ref x) => Object::Interface(x.clone()),
         }
     }
 }
 
-#[derive(PartialEq,Eq,Clone,Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Info {
-    Empty, Unimplemented
+    Empty,
+    Unimplemented,
 }
 
 impl Info {
     pub fn to_string(self) -> String {
         match self {
             Info::Empty => String::from("empty"),
-            Info::Unimplemented => String::from("unimplemented")
+            Info::Unimplemented => String::from("unimplemented"),
         }
     }
 }
 
 pub struct CharString {
-    pub data: Vec<char>
+    pub data: Vec<char>,
 }
 
 impl CharString {
-    pub fn new_object(v: Vec<char>) -> Object{
-        return Object::String(Rc::new(CharString{data: v}));
+    pub fn new_object(v: Vec<char>) -> Object {
+        return Object::String(Rc::new(CharString { data: v }));
     }
 
-    pub fn new_object_str(s: &str) -> Object{
-        return Object::String(Rc::new(CharString{data: s.chars().collect()}));
+    pub fn new_object_str(s: &str) -> Object {
+        return Object::String(Rc::new(CharString {
+            data: s.chars().collect(),
+        }));
     }
 
-    pub fn new_object_char(c: char) -> Object{
-        return Object::String(Rc::new(CharString{data: vec![c]}));
+    pub fn new_object_char(c: char) -> Object {
+        return Object::String(Rc::new(CharString { data: vec![c] }));
     }
-    
+
     pub fn to_string(&self) -> String {
         return self.data.iter().collect();
     }
@@ -134,99 +136,118 @@ impl CharString {
 
 pub struct List {
     pub v: Vec<Object>,
-    pub frozen: bool
+    pub frozen: bool,
 }
 
 impl List {
-    pub fn new_object(v: Vec<Object>) -> Object{
-        return Object::List(Rc::new(RefCell::new(List{v, frozen: false})));
+    pub fn new_object(v: Vec<Object>) -> Object {
+        return Object::List(Rc::new(RefCell::new(List { v, frozen: false })));
     }
 
     pub fn new() -> Self {
-        return List{v: Vec::new(), frozen: false};
+        return List {
+            v: Vec::new(),
+            frozen: false,
+        };
     }
 }
 
 pub struct Map {
-    pub m: HashMap<Object,Object>,
-    pub frozen: bool
+    pub m: HashMap<Object, Object>,
+    pub frozen: bool,
 }
 
 impl Map {
-    pub fn new_object(m: HashMap<Object,Object>) -> Object{
-        return Object::Map(Rc::new(RefCell::new(Map{m, frozen: false})));
+    pub fn new_object(m: HashMap<Object, Object>) -> Object {
+        return Object::Map(Rc::new(RefCell::new(Map { m, frozen: false })));
     }
 
-    pub fn new() -> Rc<RefCell<Map>>{
-        return Rc::new(RefCell::new(Map{m: HashMap::new(), frozen: false}));
+    pub fn new() -> Rc<RefCell<Map>> {
+        return Rc::new(RefCell::new(Map {
+            m: HashMap::new(),
+            frozen: false,
+        }));
     }
 
-    pub fn insert(&mut self, key: &str, value: Object){
-        self.m.insert(CharString::new_object_str(key),value);
+    pub fn insert(&mut self, key: &str, value: Object) {
+        self.m.insert(CharString::new_object_str(key), value);
     }
 
-    pub fn insert_fn_plain(&mut self, key: &str, fp: PlainFn,
-        argc_min: u32, argc_max: u32
-    ) {
+    pub fn insert_fn_plain(&mut self, key: &str, fp: PlainFn, argc_min: u32, argc_max: u32) {
         let key = CharString::new_object_str(key);
 
-        let f = Object::Function(Rc::new(Function{
+        let f = Object::Function(Rc::new(Function {
             f: EnumFunction::Plain(fp),
-            argc: if argc_min==argc_max {argc_min} else {VARIADIC},
-            argc_min, argc_max,
-            id: key.clone()
+            argc: if argc_min == argc_max {
+                argc_min
+            } else {
+                VARIADIC
+            },
+            argc_min,
+            argc_max,
+            id: key.clone(),
         }));
-        
-        self.m.insert(key,f);
+
+        self.m.insert(key, f);
     }
 }
 
 pub struct Spot {
     pub line: usize,
     pub col: usize,
-    pub module: String
+    pub module: String,
 }
 
 pub struct Exception {
     pub value: Object,
     pub traceback: Option<List>,
-    pub spot: Option<Spot>
+    pub spot: Option<Spot>,
 }
 
 impl Exception {
     pub fn new(s: &str, prototype: Object) -> Box<Exception> {
-        let t = Table{prototype, map: Map::new()};
-        t.map.borrow_mut().insert("text", CharString::new_object_str(s));
-        Box::new(Exception{
+        let t = Table {
+            prototype,
+            map: Map::new(),
+        };
+        t.map
+            .borrow_mut()
+            .insert("text", CharString::new_object_str(s));
+        Box::new(Exception {
             value: Object::Interface(Rc::new(t)),
-            traceback: Some(List::new()), spot: None
+            traceback: Some(List::new()),
+            spot: None,
         })
     }
 
     pub fn raise(rte: &RTE, x: Object) -> Box<Exception> {
         let traceback = if let Some(t) = downcast::<Table>(&x) {
-            if t.is_instance_of(&rte.exception_obj,rte) {
+            if t.is_instance_of(&rte.exception_obj, rte) {
                 Some(List::new())
-            }else{
+            } else {
                 None
             }
-        }else{
+        } else {
             None
         };
-        Box::new(Exception{
-            value: x, spot: None, traceback
+        Box::new(Exception {
+            value: x,
+            spot: None,
+            traceback,
         })
     }
 
     pub fn set_spot(&mut self, line: usize, col: usize, module: &str) {
-        self.spot = Some(Spot{line,col,module: module.to_string()});
+        self.spot = Some(Spot {
+            line,
+            col,
+            module: module.to_string(),
+        });
     }
 
     pub fn push_clm(&mut self, line: usize, col: usize, module: &str, fid: &str) {
         if let Some(ref mut a) = self.traceback {
-            let s = CharString::new_object_str(&format!(
-                "{}, {}:{}:{}",fid,module,line,col
-            ));
+            let s = CharString::new_object_str(&format!("{}, {}:{}:{}", fid, module, line, col));
             a.v.push(s);
         }
     }
@@ -247,33 +268,35 @@ impl fmt::Debug for Exception {
 
 #[macro_export]
 macro_rules! trace_err {
-    ($e:expr, $fid:expr) => (match $e {
-        Ok(val) => val,
-        Err(mut err) => {
-            err.traceback_push($fid);
-            return Err(err)
+    ($e:expr, $fid:expr) => {
+        match $e {
+            Ok(val) => val,
+            Err(mut err) => {
+                err.traceback_push($fid);
+                return Err(err);
+            }
         }
-    });
+    };
 }
 
-pub type OperatorResult = Result<(),Box<Exception>>;
-pub type FnResult = Result<Object,Box<Exception>>;
+pub type OperatorResult = Result<(), Box<Exception>>;
+pub type FnResult = Result<Object, Box<Exception>>;
 
 pub type PlainFn = fn(&mut Env, pself: &Object, argv: &[Object]) -> FnResult;
-pub type MutableFn = Box<dyn FnMut(&mut Env, &Object, &[Object])->FnResult>;
+pub type MutableFn = Box<dyn FnMut(&mut Env, &Object, &[Object]) -> FnResult>;
 
 pub struct StandardFn {
     pub address: Cell<usize>,
     pub module: Rc<Module>,
     pub gtab: Rc<RefCell<Map>>,
     pub var_count: u32,
-    pub context: Rc<RefCell<List>>
+    pub context: Rc<RefCell<List>>,
 }
 
 pub enum EnumFunction {
     Std(StandardFn),
     Plain(PlainFn),
-    Mut(RefCell<MutableFn>)
+    Mut(RefCell<MutableFn>),
 }
 
 pub struct Function {
@@ -281,56 +304,70 @@ pub struct Function {
     pub argc: u32,
     pub argc_min: u32,
     pub argc_max: u32,
-    pub id: Object
+    pub id: Object,
 }
 
 pub const VARIADIC: u32 = 0xffffffff;
 
 impl Function {
-    pub fn plain(fp: PlainFn, argc_min: u32, argc_max: u32)
-    -> Object
-    {
-        Object::Function(Rc::new(Function{
+    pub fn plain(fp: PlainFn, argc_min: u32, argc_max: u32) -> Object {
+        Object::Function(Rc::new(Function {
             f: EnumFunction::Plain(fp),
-            argc: if argc_min==argc_max {argc_min} else {VARIADIC},
-            argc_min, argc_max,
-            id: Object::Null
+            argc: if argc_min == argc_max {
+                argc_min
+            } else {
+                VARIADIC
+            },
+            argc_min,
+            argc_max,
+            id: Object::Null,
         }))
     }
 
-    pub fn new(f: StandardFn, id: Object, argc_min: u32, argc_max: u32)
-    -> Object
-    {
-        Object::Function(Rc::new(Function{
+    pub fn new(f: StandardFn, id: Object, argc_min: u32, argc_max: u32) -> Object {
+        Object::Function(Rc::new(Function {
             f: EnumFunction::Std(f),
-            argc: if argc_min==argc_max {argc_min} else {VARIADIC},
-            argc_min, argc_max, id
+            argc: if argc_min == argc_max {
+                argc_min
+            } else {
+                VARIADIC
+            },
+            argc_min,
+            argc_max,
+            id,
         }))
     }
 
-    pub fn mutable(fp: MutableFn, argc_min: u32, argc_max: u32)
-    -> Object
-    {
-        Object::Function(Rc::new(Function{
+    pub fn mutable(fp: MutableFn, argc_min: u32, argc_max: u32) -> Object {
+        Object::Function(Rc::new(Function {
             f: EnumFunction::Mut(RefCell::new(fp)),
-            argc: if argc_min==argc_max {argc_min} else {VARIADIC},
-            argc_min, argc_max, id: Object::Null
+            argc: if argc_min == argc_max {
+                argc_min
+            } else {
+                VARIADIC
+            },
+            argc_min,
+            argc_max,
+            id: Object::Null,
         }))
     }
 }
 
 pub fn new_module(_id: &str) -> Table {
-    Table{prototype: Object::Null, map: Map::new()}
+    Table {
+        prototype: Object::Null,
+        map: Map::new(),
+    }
 }
 
 #[inline]
 pub fn ptr_eq_plain<T: ?Sized, U: ?Sized>(p: &Rc<T>, q: &Rc<U>) -> bool {
-    std::ptr::eq(&**p as *const T as *const (),&**q as *const U as *const ())
+    std::ptr::eq(&**p as *const T as *const (), &**q as *const U as *const ())
 }
 
 pub trait Interface {
     fn as_any(&self) -> &dyn Any;
-    fn to_string(self: Rc<Self>, _env: &mut Env) -> Result<String,Box<Exception>> {
+    fn to_string(self: Rc<Self>, _env: &mut Env) -> Result<String, Box<Exception>> {
         Ok("interface object".to_string())
     }
     fn add(self: Rc<Self>, _b: &Object, _env: &mut Env) -> FnResult {
@@ -405,7 +442,7 @@ pub trait Interface {
     fn rle(self: Rc<Self>, _x: &Object, _env: &mut Env) -> FnResult {
         Ok(Object::unimplemented())
     }
-    
+
     fn neg(self: Rc<Self>, _env: &mut Env) -> FnResult {
         Ok(Object::unimplemented())
     }
@@ -418,17 +455,25 @@ pub trait Interface {
     }
     fn get(self: Rc<Self>, key: &Object, env: &mut Env) -> FnResult {
         env.std_exception(&format!(
-            "Type error in t.{}: getter is not implemented for objects of this type.",key))
+            "Type error in t.{}: getter is not implemented for objects of this type.",
+            key
+        ))
     }
     fn set(self: Rc<Self>, env: &mut Env, key: Object, _value: Object) -> FnResult {
         env.std_exception(&format!(
-            "Type error in t.{} = value: setter is not implemented for objects of this type.",key))
+            "Type error in t.{} = value: setter is not implemented for objects of this type.",
+            key
+        ))
     }
     fn index(self: Rc<Self>, _indices: &[Object], env: &mut Env) -> FnResult {
-        env.std_exception("Type error in a[i]: indexing is not implemented for objects of this type.")
+        env.std_exception(
+            "Type error in a[i]: indexing is not implemented for objects of this type.",
+        )
     }
     fn set_index(&self, _indices: &[Object], _value: &Object, env: &mut Env) -> FnResult {
-        env.std_exception("Type error in a[i]=value: indexing is not implemented for objects of this type.")
+        env.std_exception(
+            "Type error in a[i]=value: indexing is not implemented for objects of this type.",
+        )
     }
     fn type_name(&self, _env: &mut Env) -> String {
         "Interface object".to_string()
@@ -446,29 +491,30 @@ pub trait Interface {
         env.type_error("Type error in iter(x): x is not iterable.")
     }
     fn call(&self, env: &mut Env, pself: &Object, _argv: &[Object]) -> FnResult {
-        env.type_error1("Type error in x(...): x is not callable.","x",pself)
+        env.type_error1("Type error in x(...): x is not callable.", "x", pself)
     }
 }
 
 pub fn interface_object_get(
-  type_name: &str, key: &Object, env: &mut Env, index: usize
-) -> FnResult
-{
+    type_name: &str,
+    key: &Object,
+    env: &mut Env,
+    index: usize,
+) -> FnResult {
     let t = &env.rte().interface_types.borrow()[index];
     match t.slot(key) {
         Some(value) => return Ok(value),
-        None => {
-            env.index_error(&format!(
-                "Index error in {0}.{1}: {1} not found.", type_name, key
-            ))
-        }
+        None => env.index_error(&format!(
+            "Index error in {0}.{1}: {1} not found.",
+            type_name, key
+        )),
     }
 }
 
 pub fn downcast<T: 'static>(x: &Object) -> Option<&T> {
     if let Object::Interface(ref a) = *x {
         a.as_any().downcast_ref::<T>()
-    }else{
+    } else {
         None
     }
 }
@@ -479,27 +525,40 @@ pub trait ApproxFrom<T> {
 
 impl ApproxFrom<i32> for f64 {
     #[inline]
-    fn approx_from(x: i32) -> Self {f64::from(x)}
+    fn approx_from(x: i32) -> Self {
+        f64::from(x)
+    }
 }
 impl ApproxFrom<u32> for f64 {
     #[inline]
-    fn approx_from(x: u32) -> Self {f64::from(x)}
+    fn approx_from(x: u32) -> Self {
+        f64::from(x)
+    }
 }
 impl ApproxFrom<i64> for f64 {
     #[inline]
-    fn approx_from(x: i64) -> Self {x as f64}
+    fn approx_from(x: i64) -> Self {
+        x as f64
+    }
 }
 impl ApproxFrom<u64> for f64 {
     #[inline]
-    fn approx_from(x: u64) -> Self {x as f64}
+    fn approx_from(x: u64) -> Self {
+        x as f64
+    }
 }
 impl ApproxFrom<usize> for f64 {
     #[inline]
-    fn approx_from(x: usize) -> Self {x as f64}
+    fn approx_from(x: usize) -> Self {
+        x as f64
+    }
 }
 
 #[inline]
-pub fn float<T>(x: T) -> f64 where f64: ApproxFrom<T> {
+pub fn float<T>(x: T) -> f64
+where
+    f64: ApproxFrom<T>,
+{
     f64::approx_from(x)
 }
 
@@ -552,12 +611,13 @@ impl From<Complex64> for Object {
 }
 
 impl<T> From<Vec<T>> for Object
-where Object: From<T>
+where
+    Object: From<T>,
 {
     fn from(v: Vec<T>) -> Object {
         let mut a: Vec<Object> = Vec::with_capacity(v.len());
         for x in v {
-           a.push(Object::from(x));
+            a.push(Object::from(x));
         }
         return List::new_object(a);
     }
@@ -567,27 +627,42 @@ pub trait TypeName {
     fn type_name() -> String;
 }
 impl TypeName for bool {
-    fn type_name() -> String {String::from("bool")}
+    fn type_name() -> String {
+        String::from("bool")
+    }
 }
 impl TypeName for i32 {
-    fn type_name() -> String {String::from("i32")}
+    fn type_name() -> String {
+        String::from("i32")
+    }
 }
 impl TypeName for f64 {
-    fn type_name() -> String {String::from("f64")}
+    fn type_name() -> String {
+        String::from("f64")
+    }
 }
 impl<'a> TypeName for &'a str {
-    fn type_name() -> String {String::from("&str")}
+    fn type_name() -> String {
+        String::from("&str")
+    }
 }
 impl TypeName for String {
-    fn type_name() -> String {String::from("String")}
+    fn type_name() -> String {
+        String::from("String")
+    }
 }
 impl TypeName for Object {
-    fn type_name() -> String {String::from("Object")}
+    fn type_name() -> String {
+        String::from("Object")
+    }
 }
 impl<T> TypeName for Vec<T>
-where T: TypeName
+where
+    T: TypeName,
 {
-    fn type_name() -> String {format!("Vec<{}>",T::type_name())}
+    fn type_name() -> String {
+        format!("Vec<{}>", T::type_name())
+    }
 }
 
 pub trait Downcast {
@@ -603,19 +678,28 @@ impl Downcast for Object {
 impl Downcast for bool {
     type Output = bool;
     fn try_downcast(x: &Object) -> Option<bool> {
-        match *x {Object::Bool(x)=>Some(x), _ => None}
+        match *x {
+            Object::Bool(x) => Some(x),
+            _ => None,
+        }
     }
 }
 impl Downcast for i32 {
     type Output = i32;
     fn try_downcast(x: &Object) -> Option<i32> {
-        match *x {Object::Int(x)=>Some(x), _ => None}
+        match *x {
+            Object::Int(x) => Some(x),
+            _ => None,
+        }
     }
 }
 impl Downcast for f64 {
     type Output = f64;
     fn try_downcast(x: &Object) -> Option<f64> {
-        match *x {Object::Float(x)=>Some(x), _ => None}
+        match *x {
+            Object::Float(x) => Some(x),
+            _ => None,
+        }
     }
 }
 impl Downcast for String {
@@ -623,13 +707,14 @@ impl Downcast for String {
     fn try_downcast(x: &Object) -> Option<String> {
         match *x {
             Object::String(ref s) => Some(s.to_string()),
-            _ => None
+            _ => None,
         }
     }
 }
 
 impl<T> Downcast for Vec<T>
-where T: Downcast<Output=T>
+where
+    T: Downcast<Output = T>,
 {
     type Output = Vec<T>;
     fn try_downcast(x: &Object) -> Option<Vec<T>> {
@@ -640,14 +725,12 @@ where T: Downcast<Output=T>
                 for x in &a.v {
                     match T::try_downcast(x) {
                         Some(x) => v.push(x),
-                        None => return None
+                        None => return None,
                     }
                 }
                 return Some(v);
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 }
-
-
